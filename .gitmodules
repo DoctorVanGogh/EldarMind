@@ -1,0 +1,6 @@
+[submodule "GeminiAddon"]
+	path = GeminiAddon
+	url = https://github.com/wildstarnasa/GeminiAddon.git
+[submodule "GeminiLogging"]
+	path = GeminiLogging
+	url = https://github.com/wildstarnasa/GeminiLogging.git
