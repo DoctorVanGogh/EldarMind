@@ -1,11 +1,10 @@
 -----------------------------------------------------------------------------------------------
--- Client Lua Script for Newton
--- Copyright (c) DocVanGogh on Wildstar forums
+-- Client Lua Script for EldarMind
+-- Copyright (c) DoctorVanGogh on Wildstar forums
+-- Referenced libraries (c) their respective owners - see LICENSE file in each library directory
 -----------------------------------------------------------------------------------------------
  
---require "GameLib"
---require "PlayerPathLib"
---require "ScientistScanBotProfile"
+require "Window"
 
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -24,10 +23,8 @@ local EldarMind = Apollo.GetPackage("Gemini:Addon-1.0").tPackage:NewAddon(
 																	false, 
 																	{ 
 																		"Gemini:Logging-1.2",
-																		"DocVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0"
-																	} 
-																	--,"Gemini:Hook-1.0"																	
-																	)
+																		"DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0"
+																	})
 
 function EldarMind:OnInitialize()
 	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
@@ -36,7 +33,10 @@ function EldarMind:OnInitialize()
 		pattern = "%d [%c:%n] %l - %m",
 		appender = "GeminiConsole"
 	})	
-		
+	self.xmlDoc = XmlDoc.CreateFromFile("EldarMind.xml")
+	self.xmlDoc:RegisterCallback("OnDocumentReady", self) 	
+	
+	self.lookup = Apollo.GetPackage("DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0").tPackage;	
 end
 
 
@@ -45,12 +45,31 @@ function EldarMind:OnEnable()
 	glog:debug(string.format("OnEnable"))
 	
 	self.ready = true
-	self.lookup = Apollo.GetPackage("DocVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0").tPackage;
+
+end
+
+function EldarMind:OnDocumentReady()
+	if self.xmlDoc == nil then
+		return
+	end
+	
+	self.wndMain = Apollo.LoadForm(self.xmlDoc, "EldarMindForm", nil, self)
+	self.wndMain:FindChild("HeaderLabel"):SetText(MAJOR)
+	self.xmlDoc = nil;
+	
+	Apollo.RegisterSlashCommand("em", "OnSlashCommand", self)		
+	self.wndMain:Show(false);
 end
 -----------------------------------------------------------------------------------------------
--- Newton logic
+-- EldarMind logic
 -----------------------------------------------------------------------------------------------
-
+function EldarMind:OnSlashCommand()
+	if not self.wndMain then
+		return
+	end
+	
+	self:ToggleWindow()
+end
 
 -----------------------------------------------------------------------------------------------
 -- Persistence
@@ -90,6 +109,13 @@ function EldarMind:OnRestoreSettings(eLevel, tSavedData)
 end
 
 -----------------------------------------------------------------------------------------------
--- NewtonForm Functions
+-- EldarMind Functions
 -----------------------------------------------------------------------------------------------
-
+function EldarMind:ToggleWindow()
+	if self.wndMain:IsVisible() then
+		self.wndMain:Close()
+	else
+		self.wndMain:Show(true)
+		self.wndMain:ToFront()
+	end
+end

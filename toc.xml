@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon Author="DocVanGogh" APIVersion="8" Name="Eldar Mind" Description="Scientist experimentation assistance">
+<Addon Author="DoctorVanGogh" APIVersion="8" Name="Eldar Mind" Description="Scientist experimentation assistance">
     <Script Name="GeminiLogging/inspect.lua"/>
     <Script Name="GeminiLogging/GeminiLogging.lua"/>
     <Script Name="GeminiAddon/GeminiAddon.lua"/>
-    <!--<Script Name="GeminiHook/GeminiHook-1.0.lua"/>-->
-	<Script Name="Mastermind/P4C4R.Knuth.lua" />
-    <Script Name="EldarMind.lua" />
+    <Script Name="Loop/base.lua"/>
+    <Script Name="Tuple/tuple.lua"/>
+    <Script Name="Mastermind/P4C4R.Knuth.lua"/>
+    <Script Name="EldarMind.lua"/>
+    <Form Name="EldarMind.xml"/>
 </Addon>
