@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------------------------
 -- Client Lua Script for EldarMind
--- Copyright (c) DoctorVanGogh on Wildstar forums
+-- Copyright (c) DoctorVanGogh on Wildstar forums - All Rights reserved
 -- Referenced libraries (c) their respective owners - see LICENSE file in each library directory
 -----------------------------------------------------------------------------------------------
  
@@ -9,7 +9,9 @@ require "Window"
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
-local MAJOR, MINOR = "EldarMind-1.0", 1
+local NAME = "EldarMind"
+
+local MAJOR, MINOR = NAME.."-1.0", 1
 local glog
 
 local kstrDefaultSprite = "IconSprites:Icon_ItemMisc_AcceleratedOmniplasm";
@@ -17,19 +19,26 @@ local kstrPatternTooltipStringFormula = "<P Font=\"CRB_InterfaceLarge_B\" TextCo
 
 local kstrAttemptExperimentationFunction = "AttemptScientistExperimentation"
 
+local kstrWindowNameBlockerMismatch = "BlockerMismatch"
+local kstrWindowNameBlockerWaiting = "BlockerNoExperiment"
+
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
 
 local EldarMind = Apollo.GetPackage("Gemini:Addon-1.0").tPackage:NewAddon(
-																	"EldarMind", 
+																	NAME, 
 																	false, 
 																	{ 
 																		"Gemini:Logging-1.2",
+																		"Gemini:Locale-1.0",
 																		"DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0"
 																	},
 																	"Gemini:Hook-1.0")
-
+																	
+local GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage
+																	
 EldarMind.States = {
 	Waiting = 1,
 	Running = 2,
@@ -45,7 +54,9 @@ function EldarMind:OnInitialize()
 	})	
 	self.log = glog
 	self.xmlDoc = XmlDoc.CreateFromFile("EldarMind.xml")
-	self.xmlDoc:RegisterCallback("OnDocumentReady", self) 	
+	self.xmlDoc:RegisterCallback("OnDocumentReady", self) 
+	
+	self.localization = GeminiLocale:GetLocale(NAME)
 	
 	self.lookup = Apollo.GetPackage("DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0").tPackage;	
 		
@@ -82,11 +93,37 @@ function EldarMind:InitializeForm()
 		return
 	end
 
-	self.wndMain:FindChild("HeaderLabel"):SetText(MAJOR)	
 
 	if self.locSavedWindowLoc then
 		self.wndMain:MoveToLocation(self.locSavedWindowLoc)
 	end	
+		
+	-- localization
+	local L = self.localization
+	
+	GeminiLocale:TranslateWindow(L, self.wndMain)	
+	
+	-- some composite values auto localization won't capture
+	self.wndMain:FindChild("HeaderLabel"):SetText(string.gsub(MAJOR, NAME, L[NAME]))
+	
+	-- manually process pixies - currently GetPixieInfo doesn't return text field, so auto translation fails
+	local updatePixieText = function (wndParent, nPixieId, textKey)
+		local tPixieInfo = wndParent:GetPixieInfo(nPixieId)
+		tPixieInfo.strText = L[textKey]
+		wndParent:UpdatePixie(nPixieId, tPixieInfo)	
+	end	
+	local wndBlockerMismatch = self.wndMain:FindChild(kstrWindowNameBlockerMismatch)
+	updatePixieText(wndBlockerMismatch, 2, "Input mismatch - connection interrupted")
+	updatePixieText(wndBlockerMismatch, 3, "Reverse psychological imprinting failed - disobedient subject. Unit scheduled for augmentation. Caretaker contacted for annihilator droid dispatch - please stand by!")
+	updatePixieText(wndBlockerMismatch, 4, "Have a pleasant augmentation!")
+	
+	updatePixieText(self.wndMain:FindChild(kstrWindowNameBlockerWaiting), 2, "Waiting for connection...")
+	
+	updatePixieText(self.wndMain:FindChild("Content"), 1, "Knuth protocols V472.9a in effect! Suggested experimentation choice:")
+	
+	local wndArtBase = self.wndMain:FindChild("BGArt_Base")
+	updatePixieText(wndArtBase, 3, "Eldan Experimentation Enhancement ready")
+	updatePixieText(wndArtBase, 4, "Obedience training running - Awaiting compliance...")	
 	
 	self:UpdateForm()	
 end
@@ -97,8 +134,8 @@ function EldarMind:UpdateForm(pmExperiment, arResults)
 		return
 	end	
 	
-	self.wndMain:FindChild("BlockerMismatch"):SetVisible(self:GetState() == EldarMind.States.Mismatch)
-	self.wndMain:FindChild("BlockerWaiting"):SetVisible(self:GetState() == EldarMind.States.Waiting)	
+	self.wndMain:FindChild(kstrWindowNameBlockerMismatch):SetVisible(self:GetState() == EldarMind.States.Mismatch)
+	self.wndMain:FindChild(kstrWindowNameBlockerWaiting):SetVisible(self:GetState() == EldarMind.States.Waiting)	
 
 	if pmExperiment ~= nil then
 		self.guesses = {}

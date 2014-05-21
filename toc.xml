@@ -3,10 +3,13 @@
     <Script Name="GeminiLogging/inspect.lua"/>
     <Script Name="GeminiLogging/GeminiLogging.lua"/>
     <Script Name="GeminiAddon/GeminiAddon.lua"/>
-    <Script Name="GeminiHook\GeminiHook-1.0.lua"/>	
+    <Script Name="GeminiHook/GeminiHook-1.0.lua"/>	
     <Script Name="Loop/base.lua"/>
     <Script Name="Tuple/tuple.lua"/>
     <Script Name="Mastermind/P4C4R.Knuth.lua"/>
+    <Script Name="GeminiLocale/GeminiLocale.lua"/>	
+    <Script Name="Localization/enUS.lua"/>	
+    <Script Name="Localization/deDE.lua"/>		
     <Script Name="EldarMind.lua"/>
     <Form Name="EldarMind.xml"/>
 </Addon>

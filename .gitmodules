@@ -7,3 +7,6 @@
 [submodule "GeminiHook"]
 	path = GeminiHook
 	url = https://github.com/wildstarnasa/GeminiHook.git
+[submodule "GeminiLocale"]
+	path = GeminiLocale
+	url = https://github.com/wildstarnasa/GeminiLocale.git
