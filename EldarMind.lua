@@ -33,11 +33,13 @@ local EldarMind = Apollo.GetPackage("Gemini:Addon-1.0").tPackage:NewAddon(
 																	{ 
 																		"Gemini:Logging-1.2",
 																		"Gemini:Locale-1.0",
+																		"DoctorVanGogh:Lib:Tuple-1.0",
 																		"DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0"
 																	},
 																	"Gemini:Hook-1.0")
 																	
-local GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage
+local GeminiLocale
+local tuple
 																	
 EldarMind.States = {
 	Waiting = 1,
@@ -46,6 +48,7 @@ EldarMind.States = {
 }																	
 																
 function EldarMind:OnInitialize()
+	-- setup logger
 	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
 	glog = GeminiLogging:GetLogger({
 		level = GeminiLogging.INFO,
@@ -53,20 +56,28 @@ function EldarMind:OnInitialize()
 		appender = "GeminiConsole"
 	})	
 	self.log = glog
-	self.xmlDoc = XmlDoc.CreateFromFile("EldarMind.xml")
-	self.xmlDoc:RegisterCallback("OnDocumentReady", self) 
-	
+		
+	-- setup localization
+	GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage	
 	self.localization = GeminiLocale:GetLocale(NAME)
 	
+	-- import tuple
+	tuple = Apollo.GetPackage("DoctorVanGogh:Lib:Tuple-1.0").tPackage
+	
+	--	import lookup table
 	self.lookup = Apollo.GetPackage("DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0").tPackage;	
 		
 	self:SetState(EldarMind.States.Waiting)
+	
+	self.xmlDoc = XmlDoc.CreateFromFile("EldarMind.xml")
+	self.xmlDoc:RegisterCallback("OnDocumentReady", self) 	
+	
 end
 
 
 -- Called when player has loaded and entered the world
 function EldarMind:OnEnable()
-	glog:debug(string.format("OnEnable"))
+	glog:debug("OnEnable")
 	
 	self.ready = true
 
@@ -109,7 +120,7 @@ function EldarMind:InitializeForm()
 end
 
 function EldarMind:UpdateForm(pmExperiment, arResults)
-	glog:debug(string.format("UpdateForm(%s, %s)", tostring(pmExperiment), tostring(arResults)))
+	glog:debug("UpdateForm(%s, %s)", tostring(pmExperiment), tostring(arResults))
 
 	if not self.wndMain then
 		return
@@ -147,7 +158,7 @@ end
 
 function EldarMind:UpdateSuggestions()
 
-	glog:debug(string.format("UpdateSuggestions()"))
+	glog:debug("UpdateSuggestions()")
 
 	
 	local suggestion = self:GetCurrentSuggestion()
@@ -222,7 +233,7 @@ function EldarMind:GetCurrentSuggestion()
 end
 
 function EldarMind:PreAttemptExperimentation(numPatterns, tCode)
-	glog:debug(string.format("PreAttemptExperimentation(%s)", tostring(tCode)))
+	glog:debug("PreAttemptExperimentation(%s)", tostring(tCode))
 
 	local suggestion = self:GetCurrentSuggestion()
 	local p1, p2, p3, p4 = suggestion()
@@ -249,7 +260,7 @@ function EldarMind:GetState()
 end
 
 function EldarMind:SetState(state)
-	glog:debug(string.format("SetState(%s)", tostring(state)))
+	glog:debug("SetState(%s)", tostring(state))
 
 
 	if state == self.state then
