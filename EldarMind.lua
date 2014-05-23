@@ -48,7 +48,7 @@ EldarMind.States = {
 function EldarMind:OnInitialize()
 	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
 	glog = GeminiLogging:GetLogger({
-		level = GeminiLogging.DEBUG,
+		level = GeminiLogging.INFO,
 		pattern = "%d [%c:%n] %l - %m",
 		appender = "GeminiConsole"
 	})	
@@ -83,7 +83,6 @@ function EldarMind:OnDocumentReady()
 	Apollo.RegisterSlashCommand("em", "OnSlashCommand", self)		
 	self.wndMain:Show(false);
 	
-	end
 	Apollo.RegisterEventHandler("InvokeScientistExperimentation", "OnInvokeScientistExperimentation", self)
 	Apollo.RegisterEventHandler("ScientistExperimentationResult", "OnScientistExperimentationResult", self)	
 end
@@ -106,36 +105,18 @@ function EldarMind:InitializeForm()
 	-- some composite values auto localization won't capture
 	self.wndMain:FindChild("HeaderLabel"):SetText(string.gsub(MAJOR, NAME, L[NAME]))
 	
-	-- manually process pixies - currently GetPixieInfo doesn't return text field, so auto translation fails
-	local updatePixieText = function (wndParent, nPixieId, textKey)
-		local tPixieInfo = wndParent:GetPixieInfo(nPixieId)
-		tPixieInfo.strText = L[textKey]
-		wndParent:UpdatePixie(nPixieId, tPixieInfo)	
-	end	
-	local wndBlockerMismatch = self.wndMain:FindChild(kstrWindowNameBlockerMismatch)
-	updatePixieText(wndBlockerMismatch, 2, "Input mismatch - connection interrupted")
-	updatePixieText(wndBlockerMismatch, 3, "Reverse psychological imprinting failed - disobedient subject. Unit scheduled for augmentation. Caretaker contacted for annihilator droid dispatch - please stand by!")
-	updatePixieText(wndBlockerMismatch, 4, "Have a pleasant augmentation!")
-	
-	updatePixieText(self.wndMain:FindChild(kstrWindowNameBlockerWaiting), 2, "Waiting for connection...")
-	
-	updatePixieText(self.wndMain:FindChild("Content"), 1, "Knuth protocols V472.9a in effect! Suggested experimentation choice:")
-	
-	local wndArtBase = self.wndMain:FindChild("BGArt_Base")
-	updatePixieText(wndArtBase, 3, "Eldan Experimentation Enhancement ready")
-	updatePixieText(wndArtBase, 4, "Obedience training running - Awaiting compliance...")	
-	
 	self:UpdateForm()	
 end
 
 function EldarMind:UpdateForm(pmExperiment, arResults)
+	glog:debug(string.format("UpdateForm(%s, %s)", tostring(pmExperiment), tostring(arResults)))
 
 	if not self.wndMain then
 		return
 	end	
 	
-	self.wndMain:FindChild(kstrWindowNameBlockerMismatch):SetVisible(self:GetState() == EldarMind.States.Mismatch)
-	self.wndMain:FindChild(kstrWindowNameBlockerWaiting):SetVisible(self:GetState() == EldarMind.States.Waiting)	
+	self.wndMain:FindChild(kstrWindowNameBlockerMismatch):Show(self:GetState() == EldarMind.States.Mismatch)
+	self.wndMain:FindChild(kstrWindowNameBlockerWaiting):Show(self:GetState() == EldarMind.States.Waiting)	
 
 	if pmExperiment ~= nil then
 		self.guesses = {}
@@ -165,8 +146,11 @@ function EldarMind:UpdateForm(pmExperiment, arResults)
 end
 
 function EldarMind:UpdateSuggestions()
+
+	glog:debug(string.format("UpdateSuggestions()"))
+
 	
-	local suggestion = self:EldarMind:GetCurrentSuggestion()
+	local suggestion = self:GetCurrentSuggestion()
 	local p1, p2, p3, p4
 	
 	if suggestion then
@@ -183,7 +167,7 @@ function EldarMind:UpdateSuggestions()
 	}
 	
 	for wndSuggestion, p in pairs(tSuggestBtns) do
-		local icon = wndSuggestBtn:FindChild("SuggestionIcon")
+		local icon = wndSuggestion:FindChild("SuggestionIcon")
 		if p then
 			local pattern = self.tPatterns[p]
 			icon:SetTooltip(string.format(kstrPatternTooltipStringFormula, pattern.strName, pattern.strDescription))		
@@ -238,7 +222,9 @@ function EldarMind:GetCurrentSuggestion()
 end
 
 function EldarMind:PreAttemptExperimentation(numPatterns, tCode)
-	local suggestion = self:EldarMind:GetCurrentSuggestion()
+	glog:debug(string.format("PreAttemptExperimentation(%s)", tostring(tCode)))
+
+	local suggestion = self:GetCurrentSuggestion()
 	local p1, p2, p3, p4 = suggestion()
 	
 	if tCode.Choice1 ~= p1 or tCode.Choice2 ~= p2 or  tCode.Choice3 ~= p3 or tCode.Choice4 ~= p4 then
@@ -259,15 +245,18 @@ function EldarMind:OnSlashCommand()
 end
 
 function EldarMind:GetState()
-	return self.state
+	return self.state or EldarMind.States.Waiting
 end
 
 function EldarMind:SetState(state)
+	glog:debug(string.format("SetState(%s)", tostring(state)))
+
+
 	if state == self.state then
 		return
 	end
 
-	if not EldarMind.States[state]  then
+	if EldarMind.States.Waiting ~= state and EldarMind.States.Running ~= state and EldarMind.States.Mismatch ~= state then
 		return
 	end
 	
@@ -289,7 +278,8 @@ function EldarMind:OnSaveSettings(eLevel)
 				MAJOR = MAJOR,
 				MINOR = MINOR
 			}, 		
-			tWindowLocation = locWindowLocation and locWindowLocation:ToTable() or nil
+			tWindowLocation = locWindowLocation and locWindowLocation:ToTable() or nil,
+			logLevel = self.log.level
 		}	
 	end	
 end
@@ -306,7 +296,9 @@ function EldarMind:OnRestoreSettings(eLevel, tSavedData)
 		if tSavedData.tWindowLocation then
 			self.locSavedWindowLoc = WindowLocation.new(tSavedData.tWindowLocation)
 		end	
-	
+		if tSavedData.logLevel then
+			self.log.level = tSavedData.logLevel	
+		end	
 	end		
 end
 
@@ -317,6 +309,8 @@ function EldarMind:ToggleWindow()
 	if self.wndMain:IsVisible() then
 		self.wndMain:Close()
 	else
+		self:InitializeForm()
+		
 		self.wndMain:Show(true)
 		self.wndMain:ToFront()
 	end

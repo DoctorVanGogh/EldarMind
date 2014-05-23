@@ -3,7 +3,7 @@
 -- Copyright (c) DoctorVanGogh on Wildstar forums - All Rights reserved
 -----------------------------------------------------------------------------------------------
 
-local L = Apollo.GetPackage("Gemini:Locale-1.0").tPackage:NewLocale("EldarMind", "deDE", true)
+local L = Apollo.GetPackage("Gemini:Locale-1.0").tPackage:NewLocale("EldarMind", "deDE")
 if not L then return end
 L["EldarMind"] = "EldarHirn"
 L["Input mismatch - connection interrupted"] = "Eingabefehler - Verbindung getrennt"
