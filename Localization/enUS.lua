@@ -12,3 +12,6 @@ L["Waiting for connection..."] = true
 L["Knuth protocols V472.9a in effect! Suggested experimentation choice:"] = true
 L["Eldan Experimentation Enhancement ready"] = true
 L["Obedience training running - Awaiting compliance..."] = true
+L["Player not a scientist - consider disabling Addon %s for this character!"] = true
+L["Not a scientist - configuration disabled!"] = true
+L["Not a scientist - interface disabled!"] = true

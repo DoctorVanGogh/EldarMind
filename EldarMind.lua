@@ -22,6 +22,9 @@ local kstrAttemptExperimentationFunction = "AttemptScientistExperimentation"
 local kstrWindowNameBlockerMismatch = "BlockerMismatch"
 local kstrWindowNameBlockerWaiting = "BlockerNoExperiment"
 
+local kstrInitNoScientistWarning = "Player not a scientist - consider disabling Addon %s for this character!"
+local kstrConfigNoScientistWarning = "Not a scientist - configuration disabled!"
+local kstrUINoScientistWarning = "Not a scientist - interface disabled!"
 
 -----------------------------------------------------------------------------------------------
 -- Initialization
@@ -60,6 +63,14 @@ function EldarMind:OnInitialize()
 	-- setup localization
 	GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage	
 	self.localization = GeminiLocale:GetLocale(NAME)
+		
+	Apollo.RegisterSlashCommand("em", "OnSlashCommand", self)			
+	
+	if PlayerPathLib.GetPlayerPathType() ~= PathMission.PlayerPathType_Scientist then
+		glog:warn(self.localization[kstrInitNoScientistWarning], NAME)
+		self.bDisabled = true
+		return
+	end			
 	
 	-- import tuple
 	tuple = Apollo.GetPackage("DoctorVanGogh:Lib:Tuple-1.0").tPackage
@@ -90,32 +101,33 @@ function EldarMind:OnDocumentReady()
 	
 	self.wndMain = Apollo.LoadForm(self.xmlDoc, "EldarMindForm", nil, self)
 	self.xmlDoc = nil;
-	
-	Apollo.RegisterSlashCommand("em", "OnSlashCommand", self)		
+
 	self.wndMain:Show(false);
+	
+	-- localization
+	local L = self.localization	
+	GeminiLocale:TranslateWindow(L, self.wndMain)	
+	
+	-- some composite values auto localization won't capture
+	self.wndMain:FindChild("HeaderLabel"):SetText(string.gsub(MAJOR, NAME, L[NAME]))
+		
 	
 	Apollo.RegisterEventHandler("InvokeScientistExperimentation", "OnInvokeScientistExperimentation", self)
 	Apollo.RegisterEventHandler("ScientistExperimentationResult", "OnScientistExperimentationResult", self)	
+	
+	Apollo.RegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
+		
+end
+
+function EldarMind:OnWindowManagementReady()
+    Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = NAME})
 end
 
 function EldarMind:InitializeForm()
 	if not self.wndMain then
 		return
 	end
-
-
-	if self.locSavedWindowLoc then
-		self.wndMain:MoveToLocation(self.locSavedWindowLoc)
-	end	
 		
-	-- localization
-	local L = self.localization
-	
-	GeminiLocale:TranslateWindow(L, self.wndMain)	
-	
-	-- some composite values auto localization won't capture
-	self.wndMain:FindChild("HeaderLabel"):SetText(string.gsub(MAJOR, NAME, L[NAME]))
-	
 	self:UpdateForm()	
 end
 
@@ -149,8 +161,13 @@ function EldarMind:UpdateForm(pmExperiment, arResults)
 				nPartial = nPartial + 1
 			end
 		end	
-	
+				
 		self.guesses[#self.guesses].result = tuple(nExact, nPartial)		
+		
+		if nExact == 4 then
+			self:SetState(EldarMind.States.Waiting)
+			return
+		end
 	end	
 	
 	self:UpdateSuggestions()	
@@ -248,11 +265,13 @@ end
 
 
 function EldarMind:OnSlashCommand()
-	if not self.wndMain then
-		return
+	if self.wndMain then
+		self:ToggleWindow()
+	else
+		if self.bDisabled then
+			glog:warn(self.localization[kstrUINoScientistWarning])
+		end
 	end
-	
-	self:ToggleWindow()
 end
 
 function EldarMind:GetState()
@@ -282,14 +301,11 @@ function EldarMind:OnSaveSettings(eLevel)
 	glog:debug("OnSaveSettings")	
 	
     if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then				
-		local locWindowLocation = self.wndMain and self.wndMain:GetLocation() or self.locSavedWindowLoc				
-	
 		local tSave = { 
 			version = {
 				MAJOR = MAJOR,
 				MINOR = MINOR
 			}, 		
-			tWindowLocation = locWindowLocation and locWindowLocation:ToTable() or nil,
 			logLevel = self.log.level
 		}	
 	end	
@@ -304,9 +320,6 @@ function EldarMind:OnRestoreSettings(eLevel, tSavedData)
 	end	
 	
     if eLevel == GameLib.CodeEnumAddonSaveLevel.Account then						
-		if tSavedData.tWindowLocation then
-			self.locSavedWindowLoc = WindowLocation.new(tSavedData.tWindowLocation)
-		end	
 		if tSavedData.logLevel then
 			self.log.level = tSavedData.logLevel	
 		end	
@@ -325,8 +338,4 @@ function EldarMind:ToggleWindow()
 		self.wndMain:Show(true)
 		self.wndMain:ToFront()
 	end
-end
-
-function EldarMind:WindowMove()
-	self.locSavedWindowLoc = self.wndMain:GetLocation()
 end
