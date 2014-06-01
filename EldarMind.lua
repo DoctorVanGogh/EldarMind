@@ -5,6 +5,7 @@
 -----------------------------------------------------------------------------------------------
  
 require "Window"
+require "PlayerPathLib"
 
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -66,11 +67,11 @@ function EldarMind:OnInitialize()
 		
 	Apollo.RegisterSlashCommand("em", "OnSlashCommand", self)			
 	
-	if PlayerPathLib.GetPlayerPathType() ~= PathMission.PlayerPathType_Scientist then
-		glog:warn(self.localization[kstrInitNoScientistWarning], NAME)
-		self.bDisabled = true
-		return
-	end			
+	--if PlayerPathLib.GetPlayerPathType() ~= PathMission.PlayerPathType_Scientist then
+	--	glog:warn(self.localization[kstrInitNoScientistWarning], NAME)
+	--	self.bDisabled = true
+	--	return
+	--end			
 	
 	-- import tuple
 	tuple = Apollo.GetPackage("DoctorVanGogh:Lib:Tuple-1.0").tPackage
@@ -117,6 +118,9 @@ function EldarMind:OnDocumentReady()
 	
 	Apollo.RegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
 		
+	if not self:IsHooked(_G, "Event_CancelExperimentation") then
+		self:PostHook(_G, "Event_CancelExperimentation", "CancelExperimentation")
+	end
 end
 
 function EldarMind:OnWindowManagementReady()
@@ -146,12 +150,17 @@ function EldarMind:UpdateForm(pmExperiment, arResults)
 		self.pmExperiment = pmExperiment
 		self.tPatterns = pmExperiment:GetScientistExperimentationCurrentPatterns()		
 		
-		if not self:IsHooked(pmExperiment, kstrAttemptExperimentationFunction) then
-			self:Hook(pmExperiment, kstrAttemptExperimentationFunction, "PreAttemptExperimentation")
-		end						
+		-- HACK: pmExperiment is a userdata - can't hook that directly. So let's hook it's metatable...
+		local mtExperiment = getmetatable(pmExperiment)
+		if not self:IsHooked(mtExperiment, kstrAttemptExperimentationFunction) then
+			self:Hook(mtExperiment, kstrAttemptExperimentationFunction, "PreAttemptExperimentation")
+		end		
+		
+		self:SetState(EldarMind.States.Running)
+
 	end
 
-	if arResults ~= nil then	
+	if arResults ~= nil and self:GetState() == EldarMind.States.Running then	
 		local nExact = 0
 		local nPartial = 0
 		for idx, eCurrResult in ipairs(arResults) do
@@ -198,8 +207,8 @@ function EldarMind:UpdateSuggestions()
 		local icon = wndSuggestion:FindChild("SuggestionIcon")
 		if p then
 			local pattern = self.tPatterns[p]
+			icon:SetSprite(pattern.strIcon)
 			icon:SetTooltip(string.format(kstrPatternTooltipStringFormula, pattern.strName, pattern.strDescription))		
-			icon:SetSprite(pattern.strIcon)					
 		else
 			icon:SetTooltip("")		
 			icon:SetSprite(kstrDefaultSprite)			
@@ -249,18 +258,27 @@ function EldarMind:GetCurrentSuggestion()
 	return suggestion.guess	
 end
 
-function EldarMind:PreAttemptExperimentation(numPatterns, tCode)
-	glog:debug("PreAttemptExperimentation(%s)", tostring(tCode))
-
-	local suggestion = self:GetCurrentSuggestion()
-	local p1, p2, p3, p4 = suggestion()
+function EldarMind:PreAttemptExperimentation(luaCaller, numPatterns, tCode)
+	glog:debug("PreAttemptExperimentation: Code=%s", inspect(tCode))
 	
-	if tCode.Choice1 ~= p1 or tCode.Choice2 ~= p2 or  tCode.Choice3 ~= p3 or tCode.Choice4 ~= p4 then
+	local suggestion = self:GetCurrentSuggestion()
+	local s1, s2, s3, s4 = suggestion()
+	
+	if 	tCode.Choice1 ~= self.tPatterns[s1].idPattern or 
+		tCode.Choice2 ~= self.tPatterns[s2].idPattern or 
+		tCode.Choice3 ~= self.tPatterns[s3].idPattern or 
+		tCode.Choice4 ~= self.tPatterns[s4].idPattern then
 		self:SetState(EldarMind.States.Mismatch)
 		return		
 	end
 	
 	table.insert(self.guesses, {guess = suggestion})	
+end
+
+function EldarMind:CancelExperimentation()
+	glog:debug("CancelExperimentation")
+	
+	self:SetState(EldarMind.States.Waiting)
 end
 
 
