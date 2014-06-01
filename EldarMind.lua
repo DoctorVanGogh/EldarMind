@@ -27,6 +27,9 @@ local kstrInitNoScientistWarning = "Player not a scientist - consider disabling 
 local kstrConfigNoScientistWarning = "Not a scientist - configuration disabled!"
 local kstrUINoScientistWarning = "Not a scientist - interface disabled!"
 
+local knCreatureIdCaretakerMad = 23583
+local knCreatureIdCaretakerBenevolent = 23797
+
 -----------------------------------------------------------------------------------------------
 -- Initialization
 -----------------------------------------------------------------------------------------------
@@ -131,6 +134,9 @@ function EldarMind:InitializeForm()
 	if not self.wndMain then
 		return
 	end
+		
+	self.wndMain:FindChild("BlockerPortrait"):SetCostumeToCreatureId(knCreatureIdCaretakerMad)
+	self.wndMain:FindChild("ContentPortrait"):SetCostumeToCreatureId(knCreatureIdCaretakerBenevolent)
 		
 	self:UpdateForm()	
 end
