@@ -14,6 +14,7 @@ local NAME = "EldarMind"
 
 local MAJOR, MINOR = NAME.."-1.0", 1
 local glog
+local inspect
 
 local kstrDefaultSprite = "IconSprites:Icon_ItemMisc_AcceleratedOmniplasm";
 local kstrPatternTooltipStringFormula = "<P Font=\"CRB_InterfaceLarge_B\" TextColor=\"ff9d9d9d\">%s</P><P Font=\"CRB_InterfaceSmall\" TextColor=\"ff9d9d9d\">%s</P>"
@@ -39,6 +40,7 @@ local EldarMind = Apollo.GetPackage("Gemini:Addon-1.0").tPackage:NewAddon(
 																	false, 
 																	{ 
 																		"Gemini:Logging-1.2",
+																		"Drafto:Lib:inspect-1.2",
 																		"Gemini:Locale-1.0",
 																		"DoctorVanGogh:Lib:Tuple-1.0",
 																		"DoctorVanGogh:Lib:Mastermind:P4C4R:Knuth-1.0"
@@ -55,6 +57,9 @@ EldarMind.States = {
 }																	
 																
 function EldarMind:OnInitialize()
+	-- import inspect
+	inspect = Apollo.GetPackage("Drafto:Lib:inspect-1.2").tPackage	
+
 	-- setup logger
 	local GeminiLogging = Apollo.GetPackage("Gemini:Logging-1.2").tPackage
 	glog = GeminiLogging:GetLogger({
@@ -74,7 +79,7 @@ function EldarMind:OnInitialize()
 	--	glog:warn(self.localization[kstrInitNoScientistWarning], NAME)
 	--	self.bDisabled = true
 	--	return
-	--end			
+	--end				
 	
 	-- import tuple
 	tuple = Apollo.GetPackage("DoctorVanGogh:Lib:Tuple-1.0").tPackage
@@ -191,7 +196,6 @@ end
 function EldarMind:UpdateSuggestions()
 
 	glog:debug("UpdateSuggestions()")
-
 	
 	local suggestion = self:GetCurrentSuggestion()
 	local p1, p2, p3, p4
@@ -268,17 +272,21 @@ function EldarMind:PreAttemptExperimentation(luaCaller, numPatterns, tCode)
 	glog:debug("PreAttemptExperimentation: Code=%s", inspect(tCode))
 	
 	local suggestion = self:GetCurrentSuggestion()
-	local s1, s2, s3, s4 = suggestion()
 	
-	if 	tCode.Choice1 ~= self.tPatterns[s1].idPattern or 
-		tCode.Choice2 ~= self.tPatterns[s2].idPattern or 
-		tCode.Choice3 ~= self.tPatterns[s3].idPattern or 
-		tCode.Choice4 ~= self.tPatterns[s4].idPattern then
-		self:SetState(EldarMind.States.Mismatch)
-		return		
+	if suggestion then
+		local s1, s2, s3, s4 = suggestion()
+		
+		if 	tCode.Choice1 == self.tPatterns[s1].idPattern and 
+			tCode.Choice2 == self.tPatterns[s2].idPattern and 
+			tCode.Choice3 == self.tPatterns[s3].idPattern and 
+			tCode.Choice4 == self.tPatterns[s4].idPattern then
+			table.insert(self.guesses, {guess = suggestion})			
+			return
+		end	
 	end
 	
-	table.insert(self.guesses, {guess = suggestion})	
+	self:SetState(EldarMind.States.Mismatch)
+	
 end
 
 function EldarMind:CancelExperimentation()
